@@ -274,6 +274,7 @@ def toggle_job_status(request, job_id):
     status = "opened" if job.is_active else "closed"
     messages.success(request, f"Job '{job.title} has been {status}")
     return redirect('admin_dashboard')
+
 @login_required
 def job_chat(request, job_id):
     # Security: Only Admins can see this
@@ -306,3 +307,64 @@ def job_chat(request, job_id):
 
     # If it's a normal page load (GET request), render the Chat HTML interface
     return render(request, 'core/job_chat.html', {'job': job})
+
+@login_required 
+def edit_job(request, job_id):
+    # SECURITY: Only Admins can edit jobs!
+    if not request.user.is_placement_admin and not request.user.is_superuser:
+        messages.error(request, "Access Denied. You cannot edit jobs.")
+        return redirect('student_dashboard')
+
+    job = get_object_or_404(Job, id=job_id)
+
+    if request.method == 'POST':
+        # Grab the new data from the form
+        job.title = request.POST.get('title')
+        job.company = request.POST.get('company')
+        job.location = request.POST.get('location')
+        job.description = request.POST.get('description')
+
+        # save it to the database
+        job.save()
+        messages.success(request, 'Job posting updated successfully!')
+
+        return redirect('admin_dashboard')
+        
+    context = {
+        'job':job
+    }
+    return render(request, 'core/edit_job.html', context)
+
+@login_required
+def edit_profile(request):
+    # 1. Security Check: Ensure only students can access this
+    try:
+        student = request.user.studentprofile
+    except AttributeError:
+        messages.error(request, "Admins do not have a student profile.")
+        return redirect('admin_dashboard')
+
+    if request.method == 'POST':
+        # 2. Update the base User model (First and Last Name)
+        user = request.user
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.save()
+
+        # 3. Update the StudentProfile model 
+        # (Change 'branch' and 'graduation_year' if your model uses different field names!)
+        student.branch = request.POST.get('branch', student.branch)
+        student.graduation_year = request.POST.get('graduation_year', student.graduation_year)
+        
+        # Save the changes
+        student.save()
+        messages.success(request, "Your profile has been updated successfully!")
+        
+        return redirect('student_dashboard')
+
+    # 4. GET request: Load the page with the current data
+    context = {
+        'student': student,
+        'user': request.user
+    }
+    return render(request, 'core/edit_profile.html', context)

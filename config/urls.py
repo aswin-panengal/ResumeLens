@@ -35,6 +35,8 @@ urlpatterns = [
     path('sandbox/', views.resume_sandbox, name='resume_sandbox'),
     path('job/<int:job_id>/toggle/', views.toggle_job_status, name='toggle_job_status'),
     path('job/<int:job_id>/chat/', views.job_chat, name='job_chat'),
+    path('job/<int:job_id>/edit/', views.edit_job, name='edit_job'),
+    path('profile/edit/', views.edit_profile, name ='edit_profile'), 
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

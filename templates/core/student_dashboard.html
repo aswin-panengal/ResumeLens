@@ -77,39 +77,28 @@
 
     <div class="col-lg-4">
 
-        <div class="card border-0 shadow-lg rounded-4 p-4 mb-4" style="background: #0f172a;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-bolt text-warning me-2"></i>ATS Analysis</h6>
-                <span class="text-white-50 small">Live Check</span>
-            </div>
-            <div class="text-center py-4 my-2 border border-secondary border-opacity-25 rounded-4">
-                <h1 class="display-3 fw-bold text-white mb-0">
-                    {% if latest_score %}{{ latest_score|floatformat:0 }}{% else %}--{% endif %}<span
-                        class="fs-4 text-white-50">%</span>
-                </h1>
-                <p class="small text-white-50 mt-2 px-3">Your latest application match score.</p>
-            </div>
-
-            <a href="{% url 'resume_sandbox' %}"
-                class="btn btn-outline-light btn-sm w-100 rounded-pill py-2 mt-3 fw-bold">
-                <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Open AI Sandbox
-            </a>
-        </div>
-
-        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border">
-            <div class="d-flex align-items-center mb-3">
-                <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3 text-primary">
-                    <i class="fa-solid fa-microphone-lines"></i>
+        <div class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fa-solid fa-bolt text-warning me-2"></i>
+                        <h6 class="fw-bold mb-0 text-dark">ATS Analysis</h6>
+                    </div>
+                    <span class="text-muted small">Live Check</span>
                 </div>
-                <h6 class="fw-bold mb-0 text-dark">AI Mock Interview</h6>
-            </div>
-            <p class="small text-muted mb-4">Practice with our AI and get instant feedback on your technical answers.
-            </p>
-            <button class="btn btn-light btn-sm w-100 fw-bold border text-muted py-2" disabled>
-                <i class="fa-solid fa-lock me-2"></i>Coming Soon
-            </button>
-        </div>
 
+                <div class="text-center mb-4">
+                    <h1 class="display-3 fw-bold text-primary mb-0">
+                        {{ latest_score|default:"0" }}<span class="fs-4 text-muted">%</span>
+                    </h1>
+                    <p class="text-muted small mt-2">Your latest application match score.</p>
+                </div>
+
+                <a href="{% url 'resume_sandbox' %}" class="btn btn-outline-primary w-100 fw-bold rounded-pill">
+                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Open AI Sandbox
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
