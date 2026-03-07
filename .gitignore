@@ -1,0 +1,21 @@
+# Django Database
+db.sqlite3
+
+# Uploaded Resumes (Privacy protection)
+media/
+mediafiles/
+
+# Vector Database (Contains candidate embeddings!)
+chroma_db/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual Environment
+venv/
+env/
+
+# Environment Variables (Where your API keys live)
+.env

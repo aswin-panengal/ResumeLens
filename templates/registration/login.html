@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow-lg border-0 p-5" style="width: 400px; border-radius: 15px;">
+        <h3 class="fw-bold text-center mb-4">Welcome Back</h3>
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <input type="text" name="username" class="form-control p-3" placeholder="Email Address" required>
+            </div>
+
+            <div class="mb-4">
+                <div class="input-group">
+                    <input type="password" id="loginPassword" name="password" class="form-control p-3"
+                        placeholder="Password" required>
+                    <button class="btn btn-outline-secondary d-flex align-items-center px-3" type="button"
+                        onclick="toggleLoginPassword()">
+                        <i id="loginEyeIcon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">Login</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleLoginPassword() {
+        const passwordInput = document.getElementById('loginPassword');
+        const eyeIcon = document.getElementById('loginEyeIcon');
+
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            // Swap to 'eye-slash' icon
+            eyeIcon.classList.remove("fa-eye");
+            eyeIcon.classList.add("fa-eye-slash");
+        } else {
+            passwordInput.type = "password";
+            // Swap back to 'eye' icon
+            eyeIcon.classList.remove("fa-eye-slash");
+            eyeIcon.classList.add("fa-eye");
+        }
+    }
+</script>
+{% endblock %}

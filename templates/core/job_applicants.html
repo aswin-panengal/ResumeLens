@@ -1,0 +1,137 @@
+{% extends 'dashboard_base.html' %}
+
+{% block sidebar_menu %}
+<a href="{% url 'admin_dashboard' %}" class="nav-link text-dark fw-bold">
+    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+</a>
+{% endblock %}
+
+{% block header %}
+<div class="d-flex align-items-center">
+    <div>
+        <h4 class="fw-bold mb-0">Applicants for {{ job.title }}</h4>
+        <p class="text-muted small mb-0">{{ job.company }} • {{ job.location }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm rounded-4 mb-5">
+    <div class="card-header bg-white py-3 border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">AI Candidate Leaderboard</h6>
+            <span class="badge bg-primary rounded-pill">{{ applications.count }} Candidates</span>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0" style="min-height: 250px;">
+            <thead class="bg-light text-secondary small text-uppercase">
+                <tr>
+                    <th class="ps-4 py-3">ID</th>
+                    <th>Student Name</th>
+                    <th>Branch</th>
+                    <th>AI Match</th>
+                    <th>Status Action</th>
+                    <th>Resume</th>
+                    <th>Applied On</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td class="ps-4">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle">
+                            #{{ app.student.user.id }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                style="width: 40px; height: 40px; font-weight: bold;">
+                                {{ app.student.user.first_name|slice:":1" }}
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark">{{ app.student.user.first_name}}
+                                    {{app.student.user.last_name}}</h6>
+                                <small class="text-muted">{{ app.student.user.email }}</small>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ app.student.branch }}</span>
+                    </td>
+
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
+                                <div class="progress-bar {% if app.ai_similarity_score > 75 %}bg-success{% elif app.ai_similarity_score > 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                    role="progressbar" style="width: {{ app.ai_similarity_score|default:0 }}%;"></div>
+                            </div>
+                            <span
+                                class="fw-bold text-dark small">{{app.ai_similarity_score|default:0|floatformat:0}}%</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <form method="POST" class="d-inline m-0 p-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="application_id" value="{{ app.id }}">
+                            <div class="dropdown">
+                                <button class="btn btn-sm dropdown-toggle fw-bold 
+                                    {% if app.status == 'applied' %}btn-warning text-dark
+                                    {% elif app.status == 'shortlisted' %}btn-info text-dark
+                                    {% elif app.status == 'selected' %}btn-success
+                                    {% else %}btn-secondary{% endif %}" type="button" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    {{ app.status|title }}
+                                </button>
+                                <ul class="dropdown-menu shadow-sm border-0" style="font-size: 0.85rem;">
+                                    <li><button type="submit" name="new_status" value="applied"
+                                            class="dropdown-item">Applied</button></li>
+                                    <li><button type="submit" name="new_status" value="shortlisted"
+                                            class="dropdown-item text-info fw-bold">Shortlisted</button></li>
+                                    <li><button type="submit" name="new_status" value="selected"
+                                            class="dropdown-item text-success fw-bold">Selected</button></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li><button type="submit" name="new_status" value="rejected"
+                                            class="dropdown-item text-danger fw-bold">Rejected</button></li>
+                                </ul>
+                            </div>
+                        </form>
+                    </td>
+
+                    <td>
+                        {% if app.resume %}
+                        <a href="{{ app.resume.url }}" target="_blank"
+                            class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                            <i class="fa-regular fa-file-pdf me-2"></i>View PDF
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">No Resume</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-muted small">
+                        {{ app.applied_at|date:"M d, Y" }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="fa-solid fa-users-slash fa-2x mb-3 opacity-25"></i>
+                            <p class="mb-0">No students have applied yet.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

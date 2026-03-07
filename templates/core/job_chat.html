@@ -1,0 +1,134 @@
+{% extends 'dashboard_base.html' %}
+
+{% block sidebar_menu %}
+<a href="{% url 'admin_dashboard' %}" class="nav-link text-dark fw-bold">
+    <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+</a>
+{% endblock %}
+
+{% block header %}
+<div class="d-flex align-items-center">
+    <div>
+        <h4 class="fw-bold mb-0">AI Recruiter Assistant</h4>
+        <p class="text-muted small mb-0">Chatting with applicants for: {{job.title}}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden"
+            style="height: 75vh; display: flex; flex-direction: column;">
+
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-2 rounded-circle text-primary me-3">
+                        <i class="fa-solid fa-robot fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">ResumeLens AI</h6>
+                        <small class="text-muted">Ask me anything about the candidates for this role.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chatBox" class="card-body bg-light overflow-auto p-4" style="flex-grow: 1;">
+                <div class="d-flex mb-4">
+                    <div class="bg-white border shadow-sm rounded-3 p-3 text-dark" style="max-width: 75%;">
+                        <p class="mb-0 small">Hello! I have analyzed all resumes submitted for the <strong>{{job.title}}
+                            </strong> role. What would you like to know about the candidate pool?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="typingIndicator" class="px-4 py-2 d-none">
+                <small class="text-muted fst-italic">AI is scanning resumes...</small>
+            </div>
+
+            <div class="card-footer bg-white border-top p-3">
+                <form id="chatForm" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="text" id="userInput" class="form-control rounded-pill px-4"
+                        placeholder="Ask ResumeLens" required autocomplete="off">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const chatBox = document.getElementById('chatBox');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        chatForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add Admin Message to UI
+            addMessageToUI(message, 'admin');
+            userInput.value = '';
+
+            // Show typing indicator and scroll to bottom
+            typingIndicator.classList.remove('d-none');
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Send AJAX request to Django backend
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ message: message })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    typingIndicator.classList.add('d-none');
+                    if (data.error) {
+                        addMessageToUI('Error: ' + data.error, 'bot', true);
+                    } else {
+                        addMessageToUI(data.reply, 'bot');
+                    }
+                })
+                .catch(error => {
+                    typingIndicator.classList.add('d-none');
+                    addMessageToUI('System error. Please try again.', 'bot', true);
+                });
+        });
+
+        // 2. Updated this function to parse the Markdown
+        function addMessageToUI(text, sender, isError = false) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `d-flex mb-4 ${sender === 'admin' ? 'justify-content-end' : ''}`;
+
+            const bubble = document.createElement('div');
+            // Made max-width 85% to accommodate formatted lists better
+            bubble.className = `shadow-sm rounded-3 p-3 small ${sender === 'admin' ? 'bg-primary text-white' : 'bg-white border text-dark'} ${isError ? 'border-danger text-danger' : ''}`;
+            bubble.style.maxWidth = '85%';
+
+            if (sender === 'bot' && !isError) {
+                // Translate Gemini's Markdown into HTML
+                bubble.innerHTML = marked.parse(text);
+            } else {
+                // Just print normal text for the user
+                bubble.innerHTML = `<p class="mb-0">${text.replace(/\n/g, '<br>')}</p>`;
+            }
+
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

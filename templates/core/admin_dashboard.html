@@ -1,0 +1,156 @@
+{% extends 'dashboard_base.html' %}
+
+{% block sidebar_menu %}
+<div class="mb-4">
+    <small class="text-muted fw-bold px-3">CORE</small>
+    <a href="{% url 'admin_dashboard' %}" class="nav-link active fw-bold text-primary mt-1">
+        <i class="fa-solid fa-bullhorn me-2"></i> Post & Manage Jobs
+    </a>
+    <a href="#" class="nav-link text-dark opacity-75">
+        <i class="fa-solid fa-users me-2"></i> Student Database
+    </a>
+</div>
+
+<div class="mb-4">
+    <small class="text-muted fw-bold px-3">AI TOOLS</small>
+    <a href="#" class="nav-link text-dark opacity-75">
+        <i class="fa-solid fa-ranking-star me-2"></i> Resume Leaderboard
+        <span class="badge bg-warning text-dark ms-2" style="font-size: 0.6rem;">PRO</span>
+    </a>
+    <a href="#" class="nav-link text-dark opacity-75">
+        <i class="fa-solid fa-comments me-2"></i> Chat with Resumes
+    </a>
+</div>
+{% endblock %}
+
+{% block header %}Placement Cell Command Center{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-2 rounded-3 text-primary me-3">
+                        <i class="fa-solid fa-briefcase fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Create New Opening</h5>
+                        <p class="text-muted small mb-0">Broadcast a job to the Batch of 2026</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary text-uppercase">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <div class="form-text small text-muted">{{ field.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary py-3 fw-bold rounded-3">
+                            <i class="fa-solid fa-paper-plane me-2"></i> Publish Job Opening
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark mb-0">Active Recruitment Drives</h5>
+            <span class="badge bg-dark rounded-pill px-3 py-2">{{ jobs.count }} Live</span>
+        </div>
+
+        {% if jobs %}
+        <div class="d-flex flex-column gap-3">
+            {% for job in jobs %}
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">{{ job.title }}</h5>
+                            <div class="text-muted small">
+                                <i class="fa-solid fa-building me-1"></i> {{ job.company }}
+                                <span class="mx-2">•</span>
+                                <i class="fa-solid fa-location-dot me-1"></i> {{ job.location }}
+                            </div>
+                        </div>
+
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                <li><a class="dropdown-item" href="#"><i
+                                            class="fa-solid fa-pen me-2 text-muted"></i>Edit Job</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger fw-bold"
+                                        href="{% url 'toggle_job_status' job.id %}"
+                                        onclick="return confirm('Are you sure you want to close this job? Students will no longer be able to apply.');">
+                                        <i class="fa-solid fa-power-off me-2"></i> Close / Deactivate
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3 flex-wrap">
+                        <a href="{% url 'job_applicants' job.id %}"
+                            class="btn btn-primary btn-sm rounded-pill px-3 fw-bold flex-grow-1">
+                            <i class="fa-solid fa-users-viewfinder me-2"></i> View Applicants
+                        </a>
+
+                        <a href="{% url 'job_applicants' job.id %}"
+                            class="btn btn-outline-dark btn-sm rounded-pill px-3" title="AI Leaderboard">
+                            <i class="fa-solid fa-ranking-star me-1"></i> Leaderboard
+                        </a>
+
+                        <a href="{% url 'job_chat' job.id %}"
+                            class="btn btn-outline-dark btn-sm rounded-pill px-3 bg-light" title="Chat with Resumes">
+                            <i class="fa-solid fa-comments text-primary me-1"></i> Chat
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light border-0 py-2">
+                    <small class="text-muted">
+                        <i class="fa-regular fa-clock me-1"></i> Posted {{ job.created_at|timesince }} ago
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white border-dashed">
+            <div class="py-5">
+                <i class="fa-solid fa-clipboard-check fa-3x text-muted opacity-25 mb-3"></i>
+                <h5 class="fw-bold text-dark">No Active Jobs</h5>
+                <p class="text-muted small">Use the form on the left to post your first job.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .border-dashed {
+        border: 2px dashed #cbd5e1 !important;
+    }
+
+    .bg-primary-subtle {
+        background-color: #eff6ff !important;
+    }
+</style>
+{% endblock %}

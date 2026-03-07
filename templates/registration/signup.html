@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-5 d-flex justify-content-center">
+    <div class="card shadow-lg border-0 rounded-4 p-4" style="max-width: 500px; width: 100%;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold">Create Account</h3>
+            <p class="text-muted">Join the ResumeLens professional network</p>
+        </div>
+
+        <div class="d-flex justify-content-center mb-4">
+            <div class="btn-group w-100 p-1 bg-light rounded-3">
+                <a href="?type=student"
+                    class="btn {% if user_type != 'admin' %}btn-dark{% else %}btn-light text-muted{% endif %} rounded-2">Student</a>
+                <a href="?type=admin"
+                    class="btn {% if user_type == 'admin' %}btn-dark{% else %}btn-light text-muted{% endif %} rounded-2">Admin</a>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-muted">{{ field.label }}</label>
+
+                {% if 'password' in field.name|lower %}
+                <div class="input-group">
+                    {{ field }}
+                    <button class="btn btn-outline-secondary d-flex align-items-center" type="button"
+                        onclick="togglePassword('{{ field.id_for_label }}', 'icon-{{ field.id_for_label }}')">
+                        <i id="icon-{{ field.id_for_label }}" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                {% else %}
+                {{ field }}
+                {% endif %}
+
+                <script>
+                    var el = document.getElementsByName("{{ field.name }}")[0];
+                    if (el) { el.classList.add("form-control", "p-2"); }
+                </script>
+
+                {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold mt-2">Complete Registration</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function togglePassword(inputId, iconId) {
+        const passwordInput = document.getElementById(inputId);
+        const eyeIcon = document.getElementById(iconId);
+
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            // Swap to 'eye-slash' icon
+            eyeIcon.classList.remove("fa-eye");
+            eyeIcon.classList.add("fa-eye-slash");
+        } else {
+            passwordInput.type = "password";
+            // Swap back to 'eye' icon
+            eyeIcon.classList.remove("fa-eye-slash");
+            eyeIcon.classList.add("fa-eye");
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'dashboard_base.html' %}
+
+{% block header %}AI Resume Sandbox{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-5 mb-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold text-dark mb-3 text-center">Analyze Your Resume</h5>
+            <p class="text-muted small mb-4 text-center">Select a target job and upload your resume to see your exact
+                match score and get AI tips.</p>
+
+            <form id="analyzeForm" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Select Target Job</label>
+                    <select name="job_id" class="form-select bg-light border-0 py-2" required>
+                        <option value="" disabled selected>-- Choose a live job posting --</option>
+                        {% for job in jobs %}
+                        <option value="{{ job.id }}">{{ job.title }} at {{ job.company }}</option>
+                        {% empty %}
+                        <option value="" disabled>No active jobs available</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-secondary">Upload PDF Resume</label>
+                    <input type="file" name="resume" class="form-control bg-light border-0 py-2" accept=".pdf" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2">
+                    <i class="fa-solid fa-brain me-2"></i> Calculate Score & Get Feedback
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+            <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-chart-pie text-primary me-2"></i>Analysis Report
+            </h5>
+
+            <div id="loadingState" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4 class="mt-4 fw-bold text-dark">Analyzing Resume...</h4>
+                <p class="text-muted">Extracting text, running vector mathematics, and generating AI insights.</p>
+            </div>
+
+            <div id="resultsContainer">
+                {% if feedback %}
+
+                {% if real_score %}
+                <div class="text-center mb-4 p-4 rounded-4 border border-light shadow-sm" style="background: #f8fafc;">
+                    <h6 class="text-muted fw-bold text-uppercase mb-2">Vector Match Score</h6>
+                    <h1
+                        class="display-3 fw-bold {% if real_score > 75 %}text-success{% elif real_score > 50 %}text-warning{% else %}text-danger{% endif %} mb-0">
+                        {{ real_score|floatformat:0 }}<span class="fs-4">%</span>
+                    </h1>
+                    <p class="small text-muted mt-2 mb-0">Calculated by ResumeLens ATS Engine</p>
+                </div>
+                {% endif %}
+
+                {% if feedback.error %}
+                <div class="alert alert-danger rounded-4">
+                    <strong>AI Engine Error:</strong> {{ feedback.error }}
+                </div>
+                {% else %}
+
+                <div class="d-flex justify-content-center mb-4">
+                    <div style="width: 100%; max-width: 350px;">
+                        <canvas id="competencyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-success border-bottom pb-2">Top Strengths</h6>
+                        <ul class="text-muted small ps-3 mt-2" style="line-height: 1.6;">
+                            {% for strength in feedback.strengths %}
+                            <li class="mb-2"><strong>{{ strength.category }}:</strong> {{ strength.detail }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-danger border-bottom pb-2">Critical Gaps</h6>
+                        <ul class="text-muted small ps-3 mt-2" style="line-height: 1.6;">
+                            {% for weakness in feedback.improvements %}
+                            <li class="mb-2"><strong>{{ weakness.category }}:</strong> {{ weakness.detail }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5 opacity-50">
+                    <i class="fa-solid fa-file-invoice fa-3x mb-3 text-muted"></i>
+                    <p class="text-muted">Select a job and upload your resume to see your match score and personalized
+                        AI coaching report here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{% if feedback and not feedback.error %}
+{{ feedback.radar_metrics|json_script:"radar-data" }}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const ctx = document.getElementById('competencyChart').getContext('2d');
+
+        const rawData = document.getElementById('radar-data').textContent;
+        const radarData = JSON.parse(rawData);
+
+        const chartLabels = radarData.map(item => item.category);
+        const chartScores = radarData.map(item => item.score);
+
+        const chartData = {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Competency Profile',
+                data: chartScores,
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(13, 110, 253, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: chartData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    r: {
+                        angleLines: { display: true },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 20,
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const analyzeForm = document.getElementById('analyzeForm');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const loadingState = document.getElementById('loadingState');
+        const submitButton = analyzeForm.querySelector('button[type="submit"]');
+
+        if (analyzeForm) {
+            analyzeForm.addEventListener('submit', function () {
+                // 1. Hide the old results or empty state
+                if (resultsContainer) {
+                    resultsContainer.classList.add('d-none');
+                }
+
+                // 2. Show the loading spinner
+                if (loadingState) {
+                    loadingState.classList.remove('d-none');
+                }
+
+                // 3. Disable the submit button to prevent double-clicks
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

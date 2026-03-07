@@ -1,0 +1,54 @@
+{% extends 'dashboard_base.html' %}
+
+{% block sidebar_menu %}
+<a href="{% url 'student_dashboard' %}" class="nav-link text-dark"><i class="fa-solid fa-arrow-left me-2"></i> Back to
+    Jobs</a>
+{% endblock %}
+
+{% block header %}Apply for {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 d-inline-block p-3 rounded-circle mb-3">
+                        <i class="fa-solid fa-file-arrow-up fa-2x text-primary"></i>
+                    </div>
+                    <h4 class="fw-bold">Upload Your Resume</h4>
+                    <p class="text-muted">Applying for <span class="fw-bold text-dark">{{ job.title }}</span> at
+                        {{job.company }}</p>
+                </div>
+
+                <div class="alert alert-light border border-dashed text-center p-4 mb-4">
+                    <h6 class="fw-bold text-dark small text-uppercase mb-2">Required Skills</h6>
+                    <p class="text-muted small mb-0">{{ job.required_skills }}</p>
+                    <small class="text-success fst-italic mt-2 d-block"><i class="fa-solid fa-check-circle me-1"></i>
+                        Tailor your resume to these skills for a higher AI Score!</small>
+                </div>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Select PDF Resume</label>
+                        {{ form.resume }}
+                        <div class="form-text small">Only .pdf files are allowed. Max size 5MB.</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-3 fw-bold rounded-pill">
+                            Submit Application
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-dashed {
+        border: 2px dashed #cbd5e1 !important;
+    }
+</style>
+{% endblock %}

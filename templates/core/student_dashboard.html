@@ -1,0 +1,125 @@
+{% extends 'dashboard_base.html' %}
+
+{% block sidebar_menu %}
+<a href="{% url 'student_dashboard' %}" class="nav-link active fw-bold">
+    <i class="fa-solid fa-house me-2"></i> Overview
+</a>
+<a href="#" class="nav-link text-muted">
+    <i class="fa-solid fa-briefcase me-2"></i> Browse Jobs
+</a>
+<a href="{% url 'my_applications' %}" class="nav-link text-muted">
+    <i class="fa-solid fa-clipboard-list me-2"></i> My Applications
+</a>
+<a href="#" class="nav-link text-muted">
+    <i class="fa-solid fa-robot me-2"></i> AI Mock Interview
+</a>
+{% endblock %}
+
+{% block header %}Welcome back, {{ user.first_name }}!{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">Job Opportunities</h5>
+                <span class="badge bg-light text-dark border fw-medium px-3 py-2 mt-2 d-inline-block">
+                    Total Openings: {{jobs|length }}</span>
+            </div>
+
+            <a href="{% url 'my_applications' %}" class="btn btn-outline-primary btn-sm rounded-pill fw-bold px-3">
+                <i class="fa-solid fa-clock-rotate-left me-1"></i> Track Applied Jobs
+            </a>
+        </div>
+
+        {% if jobs %}
+        {% for job in jobs %}
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-3 border-start border-primary border-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex gap-3">
+                    <div class="bg-primary bg-opacity-10 rounded-3 d-flex align-items-center justify-content-center"
+                        style="width: 52px; height: 52px;">
+                        <i class="fa-solid fa-building-user text-primary fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1">{{ job.title }}</h6>
+                        <p class="text-muted small mb-0">{{ job.company }} • {{ job.location }}</p>
+                    </div>
+                </div>
+                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 small fw-bold">Open</span>
+            </div>
+            <hr class="my-3 opacity-25">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="small text-muted">
+                    <i class="fa-regular fa-calendar-check me-1"></i> Posted {{ job.created_at|timesince }} ago
+                </div>
+
+                <a href="{% url 'apply_for_job' job.id %}" class="btn btn-primary px-4 fw-bold rounded-pill btn-sm">
+                    Apply & Analyze
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white border-dashed">
+            <div class="py-4">
+                <div class="bg-light d-inline-block rounded-circle p-4 mb-3">
+                    <i class="fa-solid fa-briefcase fa-3x text-muted opacity-50"></i>
+                </div>
+                <h5 class="fw-bold text-dark">No job openings yet</h5>
+                <p class="text-muted small mx-auto" style="max-width: 300px;">
+                    The placement coordinator hasn't posted any jobs for your batch yet. Check back soon!
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+
+        <div class="card border-0 shadow-lg rounded-4 p-4 mb-4" style="background: #0f172a;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-bolt text-warning me-2"></i>ATS Analysis</h6>
+                <span class="text-white-50 small">Live Check</span>
+            </div>
+            <div class="text-center py-4 my-2 border border-secondary border-opacity-25 rounded-4">
+                <h1 class="display-3 fw-bold text-white mb-0">
+                    {% if latest_score %}{{ latest_score|floatformat:0 }}{% else %}--{% endif %}<span
+                        class="fs-4 text-white-50">%</span>
+                </h1>
+                <p class="small text-white-50 mt-2 px-3">Your latest application match score.</p>
+            </div>
+
+            <a href="{% url 'resume_sandbox' %}"
+                class="btn btn-outline-light btn-sm w-100 rounded-pill py-2 mt-3 fw-bold">
+                <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Open AI Sandbox
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white border">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3 text-primary">
+                    <i class="fa-solid fa-microphone-lines"></i>
+                </div>
+                <h6 class="fw-bold mb-0 text-dark">AI Mock Interview</h6>
+            </div>
+            <p class="small text-muted mb-4">Practice with our AI and get instant feedback on your technical answers.
+            </p>
+            <button class="btn btn-light btn-sm w-100 fw-bold border text-muted py-2" disabled>
+                <i class="fa-solid fa-lock me-2"></i>Coming Soon
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .border-dashed {
+        border: 2px dashed #e2e8f0 !important;
+    }
+
+    .bg-success-subtle {
+        background-color: #ecfdf5 !important;
+    }
+</style>
+{% endblock %}
