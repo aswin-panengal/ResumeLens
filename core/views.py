@@ -12,11 +12,22 @@ from django.http import JsonResponse
 import json
 from .utils import chat_with_resumes 
 
+# IMPORTS FOR OTP EMAIL VERIFICATION 
+import random
+from django.utils import timezone
+from datetime import timedelta
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
 # 1. The Home Page
 def home(request):
     return render(request, 'core/home.html')
 
-# 2. The Signup Page 
+# 2. The Signup Page (UPDATED WITH OTP & ADMIN APPROVAL)
 def signup_view(request):
     # Defaults to student if no type is in the URL
     user_type = request.GET.get('type', 'student')
@@ -25,17 +36,44 @@ def signup_view(request):
         if user_type == 'admin':
             form = AdminSignUpForm(request.POST)
         else:
-            # Removed request.FILES because resumes are now uploaded during Job Application
             form = StudentSignUpForm(request.POST)
 
         if form.is_valid():
-            form.save() # We don't need to save it to a 'user' variable anymore since we aren't auto-logging in
+            # Capture the created user object
+            user = form.save() 
             
-            # Create the professional success banner
-            messages.success(request, "Account created successfully! Please log in to access your dashboard.")
+            # --- STUDENT FLOW (OTP) ---
+            if user_type == 'student':
+                # 1. Generate OTP
+                otp = str(random.randint(100000, 999999))
+                user.otp_code = otp
+                user.otp_created_at = timezone.now()
+                user.is_email_verified = False
+                user.save()
+
+                # 2. Send the Email
+                subject = 'Verify your ResumeLens Account'
+                message = f'Hello {user.first_name},\n\nYour 6-digit verification code is: {otp}\n\nThis code expires in 10 minutes.'
+                send_mail(
+                    subject, 
+                    message, 
+                    settings.EMAIL_HOST_USER, 
+                    [user.email], 
+                    fail_silently=False
+                )
+
+                # 3. Save ID in session so the verify page knows who is trying to verify
+                request.session['verification_user_id'] = user.id
+                
+                messages.info(request, "We sent a 6-digit code to your email. Please verify your account.")
+                return redirect('verify_email')
             
-            # Redirect straight to the login page
-            return redirect('login')
+            # --- ADMIN FLOW (SUPER ADMIN APPROVAL) ---
+            else:
+                user.is_approved = False # Lock them out initially
+                user.save()
+                messages.success(request, "Admin account created! Please wait for Super Admin approval to log in.")
+                return redirect('login')
     else:
         # If it's a GET request, just show the empty form
         if user_type == 'admin':
@@ -48,14 +86,59 @@ def signup_view(request):
         'user_type': user_type
     })
 
-# 3. The Router
+# 3. The Router (UPDATED FOR SUPER ADMIN)
 @login_required
 def dashboard_redirect(request):
-    # Checks the custom user model booleans to route perfectly
-    if request.user.is_superuser or request.user.is_placement_admin:
+    # 1. Route the Super Admin (You) to the new approval dashboard
+    if request.user.is_superuser:
+        return redirect('superadmin_dashboard')
+        
+    # 2. Route the Placement Admin (Recruiters)
+    elif request.user.is_placement_admin:
+        if not request.user.is_approved:
+            logout(request)
+            messages.error(request, "Your admin account is still pending Super Admin approval.")
+            return redirect('login')
         return redirect('admin_dashboard')
+        
+    # 3. Route the Students
     else:
+        if not request.user.is_email_verified:
+            logout(request)
+            messages.error(request, "Please verify your email address before logging in.")
+            return redirect('login')
         return redirect('student_dashboard')
+
+# --- NEW: SUPER ADMIN DASHBOARD ---
+@login_required
+def superadmin_dashboard(request):
+    # Security Check: Kick out anyone who isn't the master superuser
+    if not request.user.is_superuser:
+        messages.error(request, "Access Denied. Super Admin only.")
+        return redirect('home')
+
+    # Handle the Approval Button Click
+    if request.method == 'POST':
+        recruiter_id = request.POST.get('recruiter_id')
+        action = request.POST.get('action')
+        
+        if recruiter_id and action == 'approve':
+            recruiter = get_object_or_404(User, id=recruiter_id)
+            recruiter.is_approved = True
+            recruiter.save()
+            messages.success(request, f"Recruiter {recruiter.first_name} has been officially approved!")
+            return redirect('superadmin_dashboard')
+
+    # Fetch lists to display on the page
+    pending_recruiters = User.objects.filter(is_placement_admin=True, is_approved=False)
+    approved_recruiters = User.objects.filter(is_placement_admin=True, is_approved=True)
+
+    context = {
+        'pending_recruiters': pending_recruiters,
+        'approved_recruiters': approved_recruiters
+    }
+    return render(request, 'core/superadmin_dashboard.html', context)
+# ----------------------------------
 
 # 4. Student Dash
 @login_required
@@ -181,7 +264,7 @@ def apply_for_job(request, job_id):
 
     return render(request, 'core/job_apply.html', {'form': form, 'job': job})
 
-# 4. Job applicants 
+# 8. Job applicants 
 @login_required
 def job_applicants(request, job_id):
     # Security: Only Admins can see this
@@ -213,7 +296,7 @@ def job_applicants(request, job_id):
     }
     return render(request, 'core/job_applicants.html', context)
 
-# 5. My application view 
+# 9. My application view 
 @login_required
 def my_applications(request):
     try:
@@ -224,7 +307,7 @@ def my_applications(request):
 
     return render(request, 'core/my_applications.html', {'applications': applications})
 
-# 6. Sandbox for resume 
+# 10. Sandbox for resume 
 @login_required
 def resume_sandbox(request):
     feedback = None
@@ -262,7 +345,6 @@ def resume_sandbox(request):
     })
 
 @login_required
- 
 def toggle_job_status(request, job_id):
     # Safety check: Only admins can do this 
     if not request.user.is_placement_admin and not request.user.is_superuser:
@@ -368,3 +450,39 @@ def edit_profile(request):
         'user': request.user
     }
     return render(request, 'core/edit_profile.html', context)
+
+
+# 11. Email verification
+def verify_email(request):
+    # Grab the user ID we temporarily saved during signup
+    user_id = request.session.get('verification_user_id')
+    
+    if not user_id:
+        messages.error(request, "Please sign up first.")
+        return redirect('signup')
+
+    if request.method == 'POST':
+        user_otp = request.POST.get('otp')
+        user = User.objects.get(id=user_id)
+            
+        # Security Check 1: Does the code match?
+        if user.otp_code == user_otp:
+            # Security Check 2: Is the code younger than 10 minutes?
+            expiration_time = user.otp_created_at + timedelta(minutes=10)
+                
+            if timezone.now() < expiration_time:
+                # Success! Unlock the account
+                user.is_email_verified = True
+                user.otp_code = None # Destroy the code so it can't be reused
+                user.save()
+                    
+                messages.success(request, 'Email verified successfully! You can now log in.')
+                del request.session['verification_user_id'] # Clean up the session data
+                
+                return redirect('login') 
+            else:
+                messages.error(request, 'This code has expired. Please sign up again.')
+        else:
+            messages.error(request, 'Invalid code. Please try again.')
+
+    return render(request, 'registration/verify_email.html')

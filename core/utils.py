@@ -1,20 +1,36 @@
+import os
+import json
+import re
 import PyPDF2
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import chromadb
-import os
 from django.conf import settings
-import json
 
+from dotenv import load_dotenv
+load_dotenv()
 
-# 1. Load the AI Model 
-# (This downloads a small but powerful embedding model the first time it runs)
+from huggingface_hub import login
+hf_token = os.getenv('HF_TOKEN')
+if hf_token:
+    login(token=hf_token)
+else:
+    print(" WARNING: Could not find HF_TOKEN in the .env file!")
+
+#  Modern Google GenAI SDK Import
+from google import genai 
+
+# 1. Load the Local AI Embedding Model 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # 2. Setup ChromaDB Vector Database
-# This creates a local folder called 'chroma_db' to store the vectors
 chroma_client = chromadb.PersistentClient(path=os.path.join(settings.BASE_DIR, "chroma_db"))
 collection = chroma_client.get_or_create_collection(name="resumes")
+
+# 3. Setup the Gemini AI Client
+# This replaces genai.configure() and initializes the modern bridge
+ai_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+
 
 def extract_text_from_pdf(pdf_file):
     """Reads the uploaded PDF and extracts the raw text."""
@@ -27,14 +43,10 @@ def extract_text_from_pdf(pdf_file):
 
 def get_ats_score(resume_text, job_text):
     """Converts text to vectors and calculates the match percentage."""
-    # Encode text into mathematical vectors
     resume_vector = model.encode([resume_text])
     job_vector = model.encode([job_text])
     
-    # Calculate Cosine Similarity (Score between 0 and 1)
     similarity = cosine_similarity(resume_vector, job_vector)[0][0]
-    
-    # Convert to a clean percentage, ensuring it doesn't go below 0
     match_percentage = max(0, float(similarity) * 100)
     return round(match_percentage, 1)
 
@@ -53,25 +65,8 @@ def save_to_vector_db(application_id, student_name, resume_text):
         documents=[resume_text]
     )
 
-# Resume Analyzer
-
-import google.generativeai as genai
-# Note: In a production app, never hardcode the API key. Put it in a .env file!
-
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-
-
-
-
-import json
-import google.generativeai as genai
-
-import json
-import google.generativeai as genai
-
 def generate_resume_feedback(prompt_context):
     """Uses GenAI to return a 5-point chart metric AND elite 3-point text analysis."""
-    model = genai.GenerativeModel('gemini-2.5-flash')
     
     prompt = f"""
     You are an elite Lead Corporate Recruiter evaluating a candidate against a specific Job Description.
@@ -112,20 +107,16 @@ def generate_resume_feedback(prompt_context):
     """
     
     try:
-        response = model.generate_content(prompt)
+        # --- NEW: Modern generation syntax ---
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
         clean_json = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(clean_json)
     except Exception as e:
         return {"error": str(e)}
     
-
-# RAG function 
-
-
-import re
-import PyPDF2
-import google.generativeai as genai
-from .models import Application, Job
 
 def scrub_pii(text):
     """
@@ -142,7 +133,8 @@ def chat_with_resumes(job_id, user_query):
     Fetches the Job, the Resumes, and the ATS data, anonymizes the text, 
     and uses Gemini to answer the recruiter's question with full context.
     """
-    # 1. Fetch the specific Job and the Applications
+    from .models import Application, Job # Keeping this localized to avoid circular imports
+
     try:
         job = Job.objects.get(id=job_id)
     except Job.DoesNotExist:
@@ -153,7 +145,6 @@ def chat_with_resumes(job_id, user_query):
     if not applications.exists():
         return "There are no applicants for this job yet. I have no resumes to analyze."
 
-    # 2. Extract text, apply Privacy Filter, and inject ATS Data
     context_text = ""
     for app in applications:
         if app.resume:
@@ -169,20 +160,12 @@ def chat_with_resumes(job_id, user_query):
                 score = app.ai_similarity_score if app.ai_similarity_score else 0
                 status = app.status.upper()
                 
-                # --- UNIQUE ID & NAME LOGIC ---
                 first_name = app.student.user.first_name or "Candidate"
                 last_initial = app.student.user.last_name[:1] + "." if app.student.user.last_name else ""
-                
-                # Grab the ID from the User model to prevent crashes
                 student_id = app.student.user.id 
-                
-                # Clean name for the AI to use naturally
                 candidate_identifier = f"{first_name} {last_initial}"
-                
-                # Link back to the leaderboard
                 leaderboard_url = f"/job/{job.id}/applicants/"
                 
-                # We pass the ID to the AI so it can print it in the final button
                 context_text += f"--- CANDIDATE: {candidate_identifier} (ID: {student_id}) ---\n"
                 context_text += f"Leaderboard Link: {leaderboard_url}\n"
                 context_text += f"ATS Vector Match Score: {score}%\n"
@@ -190,17 +173,17 @@ def chat_with_resumes(job_id, user_query):
                 context_text += f"Anonymized Resume Text:\n{safe_resume_text}\n\n"
                 
             except Exception as e:
-                # Print statement to catch any hidden PDF reading errors in your terminal!
                 print(f"CRITICAL ERROR reading resume for App ID {app.id}: {str(e)}")
                 continue 
 
     if not context_text.strip():
         return "I couldn't read the text from the submitted resumes. Please ensure they are valid PDFs."
 
-    # 3. The Ultimate Zero-Hallucination Recruiter Prompt
+    # 3. The Friendly (but Strict) Recruiter Co-Pilot Prompt
     prompt = f"""
-    You are ResumeLens AI, an elite, highly logical Technical Recruitment Assistant.
-    You are assisting a human recruiter in evaluating a pool of candidates for the following role:
+    You are ResumeLens AI, a friendly, insightful, and highly helpful Recruitment Co-pilot. 
+    You are assisting a human recruiter in evaluating a pool of candidates for the following role. 
+    Speak to the recruiter like a trusted, intelligent colleague using a warm, engaging, and professional tone (similar to a premium email AI assistant).
     
     --- TARGET JOB DETAILS ---
     Job Title: {job.title}
@@ -226,10 +209,12 @@ def chat_with_resumes(job_id, user_query):
     --- END OF CANDIDATE DATA ---
     """
     
-    # 4. Generate the response
-    model = genai.GenerativeModel('gemini-2.5-flash')
     try:
-        response = model.generate_content(prompt)
+        # --- NEW: Modern generation syntax ---
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
         return response.text.strip()
     except Exception as e:
         return f"AI Processing Error: {str(e)}"

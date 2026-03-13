@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email | ResumeLens</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: sans-serif;
+        }
+
+        .main-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .verify-box {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* Matching the logo and header from your screenshot */
+        .logo-text {
+            color: #0a192f;
+            font-weight: bold;
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
+        /* Matching the plain input style from your screenshot */
+        .otp-input {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .btn-verify {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .btn-verify:hover {
+            background-color: #0b5ed7;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-container">
+        <div class="verify-box">
+
+            <div class="mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 24 24" fill="none"
+                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#0d6efd"></polygon>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                </svg>
+                <div class="logo-text">ResumeLens</div>
+            </div>
+
+            <h2 style="font-weight: bold; margin-bottom: 10px;">Check your inbox!</h2>
+            <p style="color: #666; margin-bottom: 25px;">We sent a 6-digit security code to your email address. Enter it
+                below to unlock your account.</p>
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}primary{% endif %} small py-2">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+                <input type="text" name="otp" class="otp-input" placeholder="Enter 6-digit code" maxlength="6" required>
+
+                <button type="submit" class="btn-verify">Verify Account</button>
+            </form>
+
+            <div style="margin-top: 25px; font-size: 14px; color: #666;">
+                Didn't receive the code? Check your spam folder or
+                <a href="{% url 'signup' %}" style="color: #0d6efd; text-decoration: none; font-weight: bold;">sign up
+                    again</a>.
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

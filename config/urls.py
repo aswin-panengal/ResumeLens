@@ -37,6 +37,8 @@ urlpatterns = [
     path('job/<int:job_id>/chat/', views.job_chat, name='job_chat'),
     path('job/<int:job_id>/edit/', views.edit_job, name='edit_job'),
     path('profile/edit/', views.edit_profile, name ='edit_profile'), 
+    path('verify-email/', views.verify_email, name = 'verify_email'),
+    path('superadmin/', views.superadmin_dashboard, name='superadmin_dashboard'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

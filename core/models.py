@@ -6,6 +6,12 @@ class User(AbstractUser):
     is_student = models.BooleanField(default=False)
     is_placement_admin = models.BooleanField(default=False)
 
+    is_email_verified = models.BooleanField(default=False, help_text="True when student enters correct OTP.")
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
+    otp_created_at = models.DateTimeField(blank=True, null=True)
+    
+    is_approved = models.BooleanField(default=False, help_text="Super Admin must check this for new Placement Admins.")
+
     # Add explicit related_name arguments to fix the conflict
     groups = models.ManyToManyField(
         'auth.Group',
@@ -39,7 +45,6 @@ class StudentProfile(models.Model):
         ('ECE', 'Electronics and Communication Engineering'),
         ('MECH', 'Mechanical Engineering'),
     ])
-    
     
     graduation_year = models.IntegerField(default=2026, verbose_name="Graduation Year")
     
@@ -79,7 +84,7 @@ class Application(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
     resume = models.FileField(upload_to='resumes/')
     
-    # This is where the AI Magic will happen later!
+    
     ai_similarity_score = models.FloatField(default=0.0) 
     
     applied_at = models.DateTimeField(auto_now_add=True)
