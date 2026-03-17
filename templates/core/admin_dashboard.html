@@ -26,54 +26,26 @@
 {% block header %}Placement Cell Command Center{% endblock %}
 
 {% block content %}
-<div class="row g-4">
-    <div class="col-lg-5">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                <div class="d-flex align-items-center">
-                    <div class="bg-primary bg-opacity-10 p-2 rounded-3 text-primary me-3">
-                        <i class="fa-solid fa-briefcase fs-5"></i>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-0">Create New Opening</h5>
-                        <p class="text-muted small mb-0">Broadcast a job to the Batch of 2026</p>
-                    </div>
-                </div>
+<div class="row g-4 justify-content-center">
+
+    <div class="col-lg-10">
+
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-4 rounded-4 shadow-sm border-0">
+            <div>
+                <h4 class="fw-bold text-dark mb-1">Active Recruitment Drives</h4>
+                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 fw-semibold">
+                    {{ jobs.count }} Live Openings
+                </span>
             </div>
-            <div class="card-body p-4">
-                <form method="post">
-                    {% csrf_token %}
-
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary text-uppercase">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}
-                        <div class="form-text small text-muted">{{ field.help_text }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary py-3 fw-bold rounded-3">
-                            <i class="fa-solid fa-paper-plane me-2"></i> Publish Job Opening
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-7">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold text-dark mb-0">Active Recruitment Drives</h5>
-            <span class="badge bg-dark rounded-pill px-3 py-2">{{ jobs.count }} Live</span>
+            <a href="{% url 'create_job' %}" class="btn btn-primary btn-lg shadow-sm fw-bold px-4 rounded-pill">
+                <i class="fa-solid fa-plus me-2"></i> Create New Opening
+            </a>
         </div>
 
         {% if jobs %}
         <div class="d-flex flex-column gap-3">
             {% for job in jobs %}
-            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
@@ -91,11 +63,24 @@
                                 <i class="fa-solid fa-ellipsis-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                <li><a class="dropdown-item" href="{% url 'edit_job' job.id %}"><i
-                                            class="fa-solid fa-pen me-2 text-muted"></i>Edit Job</a></li>
+
                                 <li>
-                                    <hr class="dropdown-divider">
+                                    <a class="dropdown-item" href="{% url 'edit_job' job.id %}">
+                                        <i class="fa-solid fa-pen me-2 text-muted"></i>Edit Job
+                                    </a>
                                 </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                        data-bs-target="#jobInfoModal{{ job.id }}">
+                                        <i class="fa-solid fa-circle-info me-2 text-muted"></i>Job Info
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+
                                 <li>
                                     <a class="dropdown-item text-danger fw-bold"
                                         href="{% url 'toggle_job_status' job.id %}"
@@ -124,20 +109,91 @@
                         </a>
                     </div>
                 </div>
-                <div class="card-footer bg-light border-0 py-2">
+                <div class="card-footer bg-light border-0 py-2 rounded-bottom-4">
                     <small class="text-muted">
                         <i class="fa-regular fa-clock me-1"></i> Posted {{ job.created_at|timesince }} ago
                     </small>
                 </div>
             </div>
+
+            <div class="modal fade" id="jobInfoModal{{ job.id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header border-0 pb-0">
+                            <h6 class="modal-title fw-bold text-dark">Opening Details</h6>
+                            <button type="button" class="btn-close small" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body py-4">
+                            <div class="d-flex flex-column gap-4">
+
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 p-2 rounded-3 me-3">
+                                        <i class="fa-solid fa-user-shield text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block"
+                                            style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Job
+                                            Posted by</small>
+                                        <span class="fw-semibold small text-dark">
+                                            {% if job.posted_by %}
+                                            {{ job.posted_by.email|default:job.posted_by.username }}
+                                            {% else %}
+                                            <span class="text-muted fst-italic">Legacy Post (System)</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-success bg-opacity-10 p-2 rounded-3 me-3">
+                                        <i class="fa-solid fa-clock-rotate-left text-success"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block"
+                                            style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Published
+                                            On</small>
+                                        <span class="fw-semibold small text-dark">
+                                            {{ job.created_at|date:"M d, Y" }} <span
+                                                class="text-muted fw-normal">at</span> {{ job.created_at|time:"h:i A" }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center bg-light p-3 rounded-3">
+                                    <div class="bg-white p-2 rounded-2 shadow-sm me-3">
+                                        <i class="fa-solid fa-user-group text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block"
+                                            style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">Current
+                                            Volume</small>
+                                        <span class="fw-bold text-dark">{{ job.applications.count }} Applicants</span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0">
+                            <button type="button" class="btn btn-dark btn-sm w-100 rounded-pill fw-bold"
+                                data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white border-dashed">
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white border-dashed mt-4">
             <div class="py-5">
-                <i class="fa-solid fa-clipboard-check fa-3x text-muted opacity-25 mb-3"></i>
-                <h5 class="fw-bold text-dark">No Active Jobs</h5>
-                <p class="text-muted small">Use the form on the left to post your first job.</p>
+                <div class="bg-light rounded-circle d-inline-flex p-4 mb-3">
+                    <i class="fa-solid fa-folder-open fa-3x text-muted opacity-50"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">No Active Jobs</h5>
+                <p class="text-muted small mb-4">You haven't posted any recruitment drives yet.</p>
+                <a href="{% url 'create_job' %}" class="btn btn-primary px-4 rounded-pill fw-bold">
+                    <i class="fa-solid fa-plus me-2"></i> Post Your First Job
+                </a>
             </div>
         </div>
         {% endif %}
@@ -151,6 +207,12 @@
 
     .bg-primary-subtle {
         background-color: #eff6ff !important;
+    }
+
+    /* Adds a sleek blur behind the modal when opened */
+    .modal-backdrop {
+        backdrop-filter: blur(4px);
+        background-color: rgba(0, 0, 0, 0.2) !important;
     }
 </style>
 {% endblock %}

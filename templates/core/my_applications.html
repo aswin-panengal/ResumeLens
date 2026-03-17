@@ -34,18 +34,41 @@
                 {% for app in applications %}
                 <tr>
                     <td class="ps-4">
-                        <h6 class="fw-bold mb-0 text-dark">{{ app.job.title }}</h6>
-                        <small class="text-muted">{{ app.job.company }}</small>
+                        <div class="d-flex align-items-center mb-1">
+                            <h6 class="fw-bold mb-0 text-dark">
+                                {{ app.job.title|default:"Opening Removed" }}
+                            </h6>
+
+                            {% if app.job and not app.job.is_active %}
+                            <span
+                                class="badge bg-danger bg-opacity-10 text-danger border border-danger ms-2 rounded-pill fw-semibold"
+                                style="font-size: 0.65rem;">
+                                <i class="fa-solid fa-lock me-1"></i> Closed
+                            </span>
+                            {% endif %}
+
+                            {% if not app.job %}
+                            <span
+                                class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary ms-2 rounded-pill fw-semibold"
+                                style="font-size: 0.65rem;">
+                                <i class="fa-solid fa-trash me-1"></i> Deleted
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <small class="text-muted">{{ app.job.company|default:"Company Data Unavailable" }}</small>
                     </td>
+
                     <td class="text-muted small">{{ app.applied_at|date:"M d, Y" }}</td>
+
                     <td>
                         <div class="progress" style="height: 6px; width: 100px;">
-                            <div class="progress-bar" role="progressbar" style="width: 
-                            {{ app.ai_similarity_score }}%;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ app.ai_similarity_score }}%;">
                             </div>
                         </div>
                         <small class="fw-bold text-primary">{{ app.ai_similarity_score|floatformat:1 }}% Match</small>
                     </td>
+
                     <td>
                         {% if app.status == 'applied' %}
                         <span
@@ -62,6 +85,7 @@
                             class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Rejected</span>
                         {% endif %}
                     </td>
+
                     <td class="text-end pe-4">
                         {% if app.resume %}
                         <a href="{{ app.resume.url }}" target="_blank" class="btn btn-light btn-sm rounded-circle">

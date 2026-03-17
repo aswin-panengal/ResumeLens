@@ -1,0 +1,87 @@
+{% extends 'dashboard_base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-11 col-xl-10">
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="mb-4 pb-3 border-bottom">
+                        <h4 class="fw-bold mb-1 text-dark">Create New Opening</h4>
+                        <p class="text-muted mb-0 small">Broadcast a new role to the ResumeLens job board.</p>
+                    </div>
+
+                    <form method="POST" action="{% url 'create_job' %}">
+                        {% csrf_token %}
+
+                        <div class="row g-5">
+
+                            <div class="col-lg-5">
+                                <h6 class="fw-bold text-muted mb-4 text-uppercase small" style="letter-spacing: 1px;">
+                                    Basic Information</h6>
+
+                                <div class="mb-4">
+                                    <label for="title" class="form-label fw-semibold text-secondary small mb-1">Job
+                                        Title</label>
+                                    <input type="text" class="form-control bg-light border-0 rounded-3 shadow-none py-2"
+                                        id="title" name="title" placeholder="e.g. Senior Data Analyst" required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="company"
+                                        class="form-label fw-semibold text-secondary small mb-1">Company Name</label>
+                                    <input type="text" class="form-control bg-light border-0 rounded-3 shadow-none py-2"
+                                        id="company" name="company" placeholder="e.g. Amazon, Google" required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="location"
+                                        class="form-label fw-semibold text-secondary small mb-1">Location</label>
+                                    <input type="text" class="form-control bg-light border-0 rounded-3 shadow-none py-2"
+                                        id="location" name="location" placeholder="e.g. Bangalore (Hybrid)" required>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-7 d-flex flex-column">
+                                <h6 class="fw-bold text-muted mb-4 text-uppercase small" style="letter-spacing: 1px;">
+                                    Role Details</h6>
+
+                                <div class="mb-4">
+                                    <label for="description"
+                                        class="form-label fw-semibold text-secondary small mb-1">Job Description</label>
+                                    <textarea
+                                        class="form-control bg-light border-0 rounded-3 shadow-none flex-grow-1 py-2"
+                                        id="description" name="description" style="min-height: 140px; resize: none;"
+                                        placeholder="Paste the full job description here..." required></textarea>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="required_skills"
+                                        class="form-label fw-semibold text-secondary small mb-1">Required Skills (Comma
+                                        Separated)</label>
+                                    <input type="text" class="form-control bg-light border-0 rounded-3 shadow-none py-2"
+                                        id="required_skills" name="required_skills"
+                                        placeholder="e.g. Python, SQL, PowerBI, React" required>
+
+                                </div>
+
+                                <div class="mt-auto pt-2">
+                                    <button type="submit"
+                                        class="btn btn-primary w-100 fw-bold rounded-3 py-2 shadow-sm">
+                                        <i class="fa-solid fa-paper-plane me-2"></i> Publish Job Opening
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

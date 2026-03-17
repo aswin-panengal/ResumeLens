@@ -10,14 +10,7 @@ from django.conf import settings
 from dotenv import load_dotenv
 load_dotenv()
 
-from huggingface_hub import login
-hf_token = os.getenv('HF_TOKEN')
-if hf_token:
-    login(token=hf_token)
-else:
-    print(" WARNING: Could not find HF_TOKEN in the .env file!")
-
-#  Modern Google GenAI SDK Import
+# Modern Google GenAI SDK Import
 from google import genai 
 
 # 1. Load the Local AI Embedding Model 
@@ -28,18 +21,25 @@ chroma_client = chromadb.PersistentClient(path=os.path.join(settings.BASE_DIR, "
 collection = chroma_client.get_or_create_collection(name="resumes")
 
 # 3. Setup the Gemini AI Client
-# This replaces genai.configure() and initializes the modern bridge
 ai_client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
 
 def extract_text_from_pdf(pdf_file):
-    """Reads the uploaded PDF and extracts the raw text."""
-    reader = PyPDF2.PdfReader(pdf_file)
+    """Reads the uploaded PDF and extracts the raw text with error handling."""
     text = ""
-    for page in reader.pages:
-        if page.extract_text():
-            text += page.extract_text() + " "
-    return text
+    try:
+        # We try to read the PDF inside the safety net
+        reader = PyPDF2.PdfReader(pdf_file)
+        for page in reader.pages:
+            extracted = page.extract_text()
+            if extracted:
+                text += extracted + " "
+        return text
+        
+    except Exception as e:
+        # If the PDF is corrupted, 0 bytes, or fake, it catches the crash here!
+        print(f"⚠️ Error reading PDF: {e}")
+        return None
 
 def get_ats_score(resume_text, job_text):
     """Converts text to vectors and calculates the match percentage."""
@@ -107,7 +107,7 @@ def generate_resume_feedback(prompt_context):
     """
     
     try:
-        # --- NEW: Modern generation syntax ---
+        # Modern generation syntax 
         response = ai_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt
@@ -188,6 +188,7 @@ def chat_with_resumes(job_id, user_query):
     --- TARGET JOB DETAILS ---
     Job Title: {job.title}
     Company: {job.company}
+    Required Skills: {job.required_skills}
     Job Description & Requirements: {job.description}
     --------------------------
     
@@ -210,7 +211,7 @@ def chat_with_resumes(job_id, user_query):
     """
     
     try:
-        # --- NEW: Modern generation syntax ---
+        # Modern generation syntax 
         response = ai_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt

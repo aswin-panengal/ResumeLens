@@ -12,7 +12,6 @@ class User(AbstractUser):
     
     is_approved = models.BooleanField(default=False, help_text="Super Admin must check this for new Placement Admins.")
 
-    # Add explicit related_name arguments to fix the conflict
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -36,32 +35,37 @@ class User(AbstractUser):
 
 # 2. Student Profile
 class StudentProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    register_number = models.CharField(max_length=20, unique=True, verbose_name="University Register Number")
-    
-    branch = models.CharField(max_length=50, choices=[
+    BRANCH_CHOICES = [
         ('MCA', 'Master of Computer Applications'),
         ('CSE', 'Computer Science Engineering'),
         ('ECE', 'Electronics and Communication Engineering'),
         ('MECH', 'Mechanical Engineering'),
-    ])
-    
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    register_number = models.CharField(max_length=20, unique=True, verbose_name="University Register Number")
+    branch = models.CharField(max_length=50, choices=BRANCH_CHOICES)
     graduation_year = models.IntegerField(default=2026, verbose_name="Graduation Year")
     
-    # Excellent field to keep for your Parser Engine aggregation
+    # AI Parser Field
     skills_extracted = models.TextField(blank=True, help_text="AI will fill this automatically")
 
     def __str__(self):
-        # Added last_name for a cleaner admin panel view
-        return f"{self.user.first_name} {self.user.last_name} - {self.register_number}"
+        # Fallback to username if first/last names are blank
+        full_name = self.user.get_full_name() or self.user.username
+        return f"{full_name} - {self.register_number}"
     
-# 3. Job description
+
+# 3. Job Description
 class Job(models.Model):
     title = models.CharField(max_length=200, verbose_name="Job Title")
     company = models.CharField(max_length=200, verbose_name="Company Name")
     location = models.CharField(max_length=200, verbose_name="Location")
     description = models.TextField(verbose_name="Job Description")
     required_skills = models.CharField(max_length=500, help_text="Comma separated (e.g., Python, SQL, React)")
+    
+    # Notice we changed this to SET_NULL so deleting users doesn't crash the database
+    posted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='posted_jobs')
     
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
@@ -70,7 +74,7 @@ class Job(models.Model):
         return f"{self.title} at {self.company}"
     
 
-# 4. Application model
+# 4. Application Model
 class Application(models.Model):
     STATUS_CHOICES = [
         ('applied', 'Applied'),
@@ -79,18 +83,18 @@ class Application(models.Model):
         ('selected', 'Selected'),
     ]
 
-    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    # CRITICAL FIX: Changed CASCADE to SET_NULL. This ensures application history stays even if the job is deleted.
+    job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True, related_name='applications')
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name='applications')
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
     resume = models.FileField(upload_to='resumes/')
-    
-    
     ai_similarity_score = models.FloatField(default=0.0) 
-    
     applied_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('job', 'student') # Prevents applying to the same job twice
+        unique_together = ('job', 'student') 
 
     def __str__(self):
-        return f"{self.student.user.first_name} applied for {self.job.title}"
+        job_title = self.job.title if self.job else "Deleted Job"
+        return f"{self.student.user.username} applied for {job_title}"

@@ -30,7 +30,7 @@
                     <input type="file" name="resume" class="form-control bg-light border-0 py-2" accept=".pdf" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2">
+                <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2" id="submitBtn">
                     <i class="fa-solid fa-brain me-2"></i> Calculate Score & Get Feedback
                 </button>
             </form>
@@ -52,7 +52,6 @@
 
             <div id="resultsContainer">
                 {% if feedback %}
-
                 {% if real_score %}
                 <div class="text-center mb-4 p-4 rounded-4 border border-light shadow-sm" style="background: #f8fafc;">
                     <h6 class="text-muted fw-bold text-uppercase mb-2">Vector Match Score</h6>
@@ -69,15 +68,14 @@
                     <strong>AI Engine Error:</strong> {{ feedback.error }}
                 </div>
                 {% else %}
-
                 <div class="d-flex justify-content-center mb-4">
-                    <div style="width: 100%; max-width: 350px;">
+                    <div style="width: 100%; max-width: 400px; max-height: 400px;">
                         <canvas id="competencyChart"></canvas>
                     </div>
                 </div>
 
                 <div class="row mt-4">
-                    <div class="col-md-6">
+                    <div class="col-md-6 mb-3 mb-md-0">
                         <h6 class="fw-bold text-success border-bottom pb-2">Top Strengths</h6>
                         <ul class="text-muted small ps-3 mt-2" style="line-height: 1.6;">
                             {% for strength in feedback.strengths %}
@@ -116,33 +114,36 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const ctx = document.getElementById('competencyChart').getContext('2d');
-
         const rawData = document.getElementById('radar-data').textContent;
         const radarData = JSON.parse(rawData);
 
         const chartLabels = radarData.map(item => item.category);
         const chartScores = radarData.map(item => item.score);
 
-        const chartData = {
-            labels: chartLabels,
-            datasets: [{
-                label: 'Competency Profile',
-                data: chartScores,
-                backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                borderColor: 'rgba(13, 110, 253, 1)',
-                borderWidth: 2,
-                pointBackgroundColor: 'rgba(13, 110, 253, 1)',
-                pointBorderColor: '#fff',
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
-            }]
-        };
+        // Define a global chart variable to prevent "Canvas already in use" errors on reload
+        if (window.competencyRadarChart) {
+            window.competencyRadarChart.destroy();
+        }
 
-        new Chart(ctx, {
+        window.competencyRadarChart = new Chart(ctx, {
             type: 'radar',
-            data: chartData,
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Competency Profile',
+                    data: chartScores,
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(13, 110, 253, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(13, 110, 253, 1)'
+                }]
+            },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
                 plugins: {
                     legend: { display: false }
                 },
@@ -168,24 +169,18 @@
         const analyzeForm = document.getElementById('analyzeForm');
         const resultsContainer = document.getElementById('resultsContainer');
         const loadingState = document.getElementById('loadingState');
-        const submitButton = analyzeForm.querySelector('button[type="submit"]');
+        const submitBtn = document.getElementById('submitBtn');
 
         if (analyzeForm) {
             analyzeForm.addEventListener('submit', function () {
-                // 1. Hide the old results or empty state
-                if (resultsContainer) {
-                    resultsContainer.classList.add('d-none');
-                }
+                // Hide old results, show loader
+                if (resultsContainer) resultsContainer.classList.add('d-none');
+                if (loadingState) loadingState.classList.remove('d-none');
 
-                // 2. Show the loading spinner
-                if (loadingState) {
-                    loadingState.classList.remove('d-none');
-                }
-
-                // 3. Disable the submit button to prevent double-clicks
-                if (submitButton) {
-                    submitButton.disabled = true;
-                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+                // Disable submit button
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
                 }
             });
         }
