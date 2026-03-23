@@ -65,52 +65,63 @@ def save_to_vector_db(application_id, student_name, resume_text):
         documents=[resume_text]
     )
 
-def generate_resume_feedback(prompt_context):
+import json
+
+# FIX 1: Add similarity_score to the arguments
+def generate_resume_feedback(prompt_context, similarity_score):
     """Uses GenAI to return a 5-point chart metric AND elite 3-point text analysis."""
     
+    # FIX 2: Standardized the variable to {similarity_score} everywhere
     prompt = f"""
-    You are an elite Lead Corporate Recruiter evaluating a candidate against a specific Job Description.
-    
-    CRITICAL RESTRICTION: Return strictly valid JSON. Do not include markdown, backticks, or text outside the JSON.
-    
-    1. Evaluate the candidate's EXACT ALIGNMENT with the Job Description across 5 metrics to power a Radar Chart. 
-    You must be highly critical and strict. 
-    - If the job requires a skill (like Python) and they do not have it, score them below 30.
-    - Do not grade their general ability; grade ONLY how perfectly they match this specific role. 
-    - A generally good resume that does not fit the specific job description should receive very low scores (20s to 40s).
-    
-    2. Provide 3 specific strengths and 3 specific areas for improvement using the exact elite corporate categories provided below. Keep details under 15 words.
-    
-    Use this EXACT JSON structure:
-    {{
-      "radar_metrics": [
-        {{"category": "Core Tech Skills", "score": 88}},
-        {{"category": "Quantifiable Impact", "score": 65}},
-        {{"category": "Tool & Framework Stack", "score": 90}},
-        {{"category": "Domain Expertise", "score": 75}},
-        {{"category": "Project Complexity", "score": 80}}
-      ],
-      "strengths": [
-        {{"category": "Core Competency", "detail": "Max 15 words explaining alignment with technical or domain skills."}},
-        {{"category": "Quantifiable Impact", "detail": "Max 15 words on measurable results shown in past projects."}},
-        {{"category": "Domain Expertise", "detail": "Max 15 words on architectural or theoretical understanding."}}
-      ],
-      "improvements": [
-        {{"category": "Missing Core Proficiency", "detail": "Max 15 words on a critical missing skill or tool."}},
-        {{"category": "Scale/Complexity Gap", "detail": "Max 15 words on lack of enterprise-level complexity."}},
-        {{"category": "Actionable Next Step", "detail": "Max 15 words suggesting a specific project to bridge the gap."}}
-      ]
-    }}
-    
-    Context:
-    {prompt_context}
-    """
+You are an expert AI Technical Recruiter. Your task is to generate the data for a candidate evaluation Radar Chart.
+
+CONTEXT & ANCHOR SCORE:
+- The system has already calculated this candidate's Overall ATS Match Score: {similarity_score}%
+- Candidate & Job Description Data: {prompt_context}
+
+YOUR INSTRUCTIONS:
+1. Review the provided resume and job description.
+2. Find the candidate's specific strengths and weaknesses to distribute the scores across the 5 categories below.
+3. CRITICAL RULE: The scores you assign to the 5 metrics MUST average out to roughly the Overall Score of {similarity_score}%. 
+   - Example: If the overall score is 63%, do not give them scores in the 30s. Find the areas they are strongest in (maybe a 75 in Domain Expertise) and weakest in (maybe a 45 in Project Complexity) so the chart accurately reflects the {similarity_score}% reality.
+
+THE 5 EXACT METRICS TO GRADE (0-100 Scale):
+1. Core Tech Skills
+2. Quantifiable Impact
+3. Tool & Framework Stack
+4. Domain Expertise
+5. Project Complexity
+
+OUTPUT FORMAT:
+Return ONLY raw, valid JSON. No markdown, no backticks, no conversational text. Use this exact structure:
+
+{{
+  "radar_metrics": [
+    {{"category": "Core Tech Skills", "score": 0}},
+    {{"category": "Quantifiable Impact", "score": 0}},
+    {{"category": "Tool & Framework Stack", "score": 0}},
+    {{"category": "Domain Expertise", "score": 0}},
+    {{"category": "Project Complexity", "score": 0}}
+  ],
+  "strengths": [
+    {{"category": "Core Competency", "detail": "Max 15 words explaining a specific strength found in the resume."}},
+    {{"category": "Quantifiable Impact", "detail": "Max 15 words on measurable results."}},
+    {{"category": "Domain Expertise", "detail": "Max 15 words on their industry alignment."}}
+  ],
+  "improvements": [
+    {{"category": "Missing Core Proficiency", "detail": "Max 15 words on a missing skill."}},
+    {{"category": "Scale/Complexity Gap", "detail": "Max 15 words on lack of experience."}},
+    {{"category": "Actionable Next Step", "detail": "Max 15 words suggesting how to improve."}}
+  ]
+}}
+"""
     
     try:
         # Modern generation syntax 
         response = ai_client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt
+            contents=prompt,
+            config={'temperature': 0.0}
         )
         clean_json = response.text.strip().replace('```json', '').replace('```', '')
         return json.loads(clean_json)
@@ -140,13 +151,15 @@ def chat_with_resumes(job_id, user_query):
     except Job.DoesNotExist:
         return "Error: Could not find the job posting details."
         
-    applications = Application.objects.filter(job_id=job_id).select_related('student', 'student__user')
+    # 1. FIX: Order the applications EXACTLY like the leaderboard
+    applications = Application.objects.filter(job_id=job_id).select_related('student', 'student__user').order_by('-ai_similarity_score')
     
     if not applications.exists():
         return "There are no applicants for this job yet. I have no resumes to analyze."
 
     context_text = ""
-    for app in applications:
+    # 2. FIX: Use enumerate to generate a Rank (1, 2, 3...)
+    for rank, app in enumerate(applications, start=1):
         if app.resume:
             try:
                 reader = PyPDF2.PdfReader(app.resume.path)
@@ -162,12 +175,10 @@ def chat_with_resumes(job_id, user_query):
                 
                 first_name = app.student.user.first_name or "Candidate"
                 last_initial = app.student.user.last_name[:1] + "." if app.student.user.last_name else ""
-                student_id = app.student.user.id 
                 candidate_identifier = f"{first_name} {last_initial}"
-                leaderboard_url = f"/job/{job.id}/applicants/"
                 
-                context_text += f"--- CANDIDATE: {candidate_identifier} (ID: {student_id}) ---\n"
-                context_text += f"Leaderboard Link: {leaderboard_url}\n"
+                # 3. FIX: Feed the Rank instead of the ID!
+                context_text += f"--- CANDIDATE: {candidate_identifier} (Rank #{rank}) ---\n"
                 context_text += f"ATS Vector Match Score: {score}%\n"
                 context_text += f"Current System Status: {status}\n"
                 context_text += f"Anonymized Resume Text:\n{safe_resume_text}\n\n"
@@ -199,9 +210,10 @@ def chat_with_resumes(job_id, user_query):
     2. NO ASSUMPTIONS: If a skill or experience is not explicitly written, assume they do not have it.
     3. EVALUATING "BEST": Combine the ATS Vector Match Score with the specific skills in the text.
     4. BE DECISIVE: Give a clear recommendation or direct answer to the recruiter's question.
-    5. PROFESSIONAL HYPERLINKS: DO NOT hyperlink the candidate's name every time you type it. Instead, write their name normally in the text. At the end of their evaluation, provide exactly ONE clickable action link formatted like this: [👉 Manage Status for Candidate Name (#ID)](Leaderboard Link). 
-    6. FORMATTING: Use markdown, bullet points, and bold text for readability. Avoid large blocks of text.
-    7. STRICT BREVITY (DEFAULT): By default, provide extremely short, concise answers (1-3 brief bullet points max). Do not write long paragraphs unless the recruiter explicitly asks for a "detailed", "comprehensive", or "full" explanation.
+    5. USE RANKS, NOT IDS: Never mention an internal database ID. Refer to candidates by their Name and Leaderboard Rank (e.g., "Applicant Name (Rank #1)").
+    6. PROFESSIONAL HYPERLINKS: At the end of your response, provide exactly ONE clickable action link formatted exactly like this: [ View on Leaderboard](/job/{job.id}/leaderboard/). 
+    7. FORMATTING: Use markdown, bullet points, and bold text for readability. Avoid large blocks of text.
+    8. STRICT BREVITY (DEFAULT): By default, provide extremely short, concise answers (1-3 brief bullet points max).
     
     Recruiter's Question: "{user_query}"
     

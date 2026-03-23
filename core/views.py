@@ -25,6 +25,42 @@ User = get_user_model()
 def home(request):
     return render(request, 'core/home.html')
 
+# def signup_view(request):
+#     user_type = request.GET.get('type', 'student')
+    
+#     if request.method == 'POST':
+#         form = AdminSignUpForm(request.POST) if user_type == 'admin' else StudentSignUpForm(request.POST)
+
+#         if form.is_valid():
+#             user = form.save() 
+            
+#             if user_type == 'student':
+#                 # OTP Generation
+#                 otp = str(random.randint(100000, 999999))
+#                 user.otp_code = otp
+#                 user.otp_created_at = timezone.now()
+#                 user.is_email_verified = False
+#                 user.save()
+
+#                 # Send Verification Email
+#                 subject = 'Verify your ResumeLens Account'
+#                 message = f'Hello {user.first_name},\n\nYour verification code is: {otp}\n\nExpires in 10 minutes.'
+#                 send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+
+#                 request.session['verification_user_id'] = user.id
+#                 messages.info(request, "Please enter the 6-digit code sent to your email.")
+#                 return redirect('verify_email')
+            
+#             else:
+#                 # Admin Flow
+#                 user.is_approved = False
+#                 user.save()
+#                 messages.success(request, "Admin account created! Awaiting Super Admin approval.")
+#                 return redirect('login')
+#     else:
+#         form = AdminSignUpForm() if user_type == 'admin' else StudentSignUpForm()
+
+#     return render(request, 'registration/signup.html', {'form': form, 'user_type': user_type})
 def signup_view(request):
     user_type = request.GET.get('type', 'student')
     
@@ -35,21 +71,33 @@ def signup_view(request):
             user = form.save() 
             
             if user_type == 'student':
-                # OTP Generation
-                otp = str(random.randint(100000, 999999))
-                user.otp_code = otp
-                user.otp_created_at = timezone.now()
-                user.is_email_verified = False
-                user.save()
+                
+                # THE TOGGLE SWITCH
+                BYPASS_OTP = True
+                
+                if BYPASS_OTP:
+                    # INSTANT BYPASS FLOW
+                    user.is_email_verified = True
+                    user.save()
+                    messages.success(request, "Test Mode: Account instantly verified! You can log in.")
+                    return redirect('login')
+                else:
+                    # OTP FLOW (Safe and untouched)
+                    # OTP Generation
+                    otp = str(random.randint(100000, 999999))
+                    user.otp_code = otp
+                    user.otp_created_at = timezone.now()
+                    user.is_email_verified = False
+                    user.save()
 
-                # Send Verification Email
-                subject = 'Verify your ResumeLens Account'
-                message = f'Hello {user.first_name},\n\nYour verification code is: {otp}\n\nExpires in 10 minutes.'
-                send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+                    # Send Verification Email
+                    subject = 'Verify your ResumeLens Account'
+                    message = f'Hello {user.first_name},\n\nYour verification code is: {otp}\n\nExpires in 10 minutes.'
+                    send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
 
-                request.session['verification_user_id'] = user.id
-                messages.info(request, "Please enter the 6-digit code sent to your email.")
-                return redirect('verify_email')
+                    request.session['verification_user_id'] = user.id
+                    messages.info(request, "Please enter the 6-digit code sent to your email.")
+                    return redirect('verify_email')
             
             else:
                 # Admin Flow
@@ -212,6 +260,7 @@ def job_applicants(request, job_id):
         return redirect('student_dashboard')
 
     job = get_object_or_404(Job, id=job_id)
+    
     if request.method == 'POST':
         app_id = request.POST.get('application_id')
         new_status = request.POST.get('new_status')
@@ -220,8 +269,30 @@ def job_applicants(request, job_id):
         application.save()
         messages.success(request, f"Status updated for {application.student.user.first_name}")
 
-    apps = Application.objects.filter(job=job).select_related('student__user').order_by('-ai_similarity_score')
+    # SORT BY DATE
+    apps = Application.objects.filter(job=job).select_related('student__user').order_by('-applied_at')
     return render(request, 'core/job_applicants.html', {'job': job, 'applications': apps})
+
+
+
+@login_required
+def leaderboard(request, job_id):
+    if not request.user.is_placement_admin and not request.user.is_superuser:
+        return redirect('student_dashboard')
+
+    job = get_object_or_404(Job, id=job_id)
+
+    if request.method == 'POST':
+        app_id = request.POST.get('application_id')
+        new_status = request.POST.get('new_status')
+        application = get_object_or_404(Application, id=app_id)
+        application.status = new_status
+        application.save()
+        messages.success(request, f"Status updated to '{new_status.title()}' for {application.student.user.first_name}")
+   
+    apps = Application.objects.filter(job=job).select_related('student__user').order_by('-ai_similarity_score')
+    
+    return render(request, 'core/leaderboard.html', {'job': job, 'applications': apps})
 
 @login_required
 def my_applications(request):
@@ -246,8 +317,14 @@ def resume_sandbox(request):
             
             if resume_text:
                 job_context = f"{target_job.title} {target_job.required_skills} {target_job.description}"
+                
+                # 1. Calculate the Math Score (Your code)
                 real_score = get_ats_score(resume_text, job_context)
-                feedback = generate_resume_feedback(f"Target: {target_job.title}\nJD: {target_job.description}\nResume: {resume_text}")
+                
+                # 2. THE FIX: Pass that real_score into the AI function so it can anchor the radar chart!
+                context_string = f"Target: {target_job.title}\nJD: {target_job.description}\nResume: {resume_text}"
+                feedback = generate_resume_feedback(context_string, real_score)
+                
             else:
                 messages.error(request, "Invalid PDF.")
         
@@ -284,14 +361,20 @@ def edit_job(request, job_id):
         return redirect('student_dashboard')
 
     job = get_object_or_404(Job, id=job_id)
+    
     if request.method == 'POST':
         job.title = request.POST.get('title')
         job.company = request.POST.get('company')
         job.location = request.POST.get('location')
+        
+        # ADDED: Save the required skills to the database
+        job.required_skills = request.POST.get('required_skills') 
+        
         job.description = request.POST.get('description')
         job.save()
         messages.success(request, 'Updated successfully!')
         return redirect('admin_dashboard')
+        
     return render(request, 'core/edit_job.html', {'job': job})
 
 @login_required

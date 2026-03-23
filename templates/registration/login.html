@@ -3,6 +3,16 @@
 <div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
     <div class="card shadow-lg border-0 p-5" style="width: 400px; border-radius: 15px;">
         <h3 class="fw-bold text-center mb-4">Welcome Back</h3>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            {% for error in form.non_field_errors %}
+            <strong>Wait!</strong> {{ error }}
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
 

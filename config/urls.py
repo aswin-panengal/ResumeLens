@@ -27,6 +27,7 @@ urlpatterns = [
     path('dashboard/admin/', views.admin_dashboard, name='admin_dashboard'),
     path('dashboard/create-job/', views.create_job_view, name='create_job'),
     path('job/<int:job_id>/applicants/', views.job_applicants, name='job_applicants'),
+    path('job/<int:job_id>/leaderboard/', views.leaderboard, name='leaderboard'),
     path('job/<int:job_id>/toggle/', views.toggle_job_status, name='toggle_job_status'),
     path('job/<int:job_id>/edit/', views.edit_job, name='edit_job'),
     path('job/<int:job_id>/chat/', views.job_chat, name='job_chat'),
