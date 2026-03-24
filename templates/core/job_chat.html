@@ -76,7 +76,7 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-        // FIXED: Configure Marked.js for v10+ using the 'token' object
+        // Configure Marked.js for v10+ using the 'token' object
         marked.use({
             renderer: {
                 link(token) {
@@ -94,7 +94,7 @@
             addMessageToUI(message, 'admin');
             userInput.value = '';
 
-            // Show typing indicator and scroll to bottom
+            // Show typing indicator and scroll to bottom so it's visible
             typingIndicator.classList.remove('d-none');
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -147,7 +147,18 @@
 
             wrapper.appendChild(bubble);
             chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // --- THE FIX: SMART SCROLLING LOGIC ---
+            if (sender === 'bot') {
+                // Use a tiny timeout to ensure the DOM has fully rendered the markdown height
+                setTimeout(() => {
+                    // Scroll so the START of the new AI message is at the top of the chat box
+                    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+            } else {
+                // When the admin types, simply scroll to the absolute bottom
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
         }
     });
 </script>
