@@ -162,9 +162,11 @@ def logout_view(request):
 
 @login_required
 def superadmin_dashboard(request):
+    # Security check
     if not request.user.is_superuser:
         return redirect('home')
 
+    # Handle recruiter approval
     if request.method == 'POST':
         recruiter_id = request.POST.get('recruiter_id')
         if recruiter_id:
@@ -173,10 +175,15 @@ def superadmin_dashboard(request):
             recruiter.save()
             messages.success(request, f"Approved {recruiter.get_full_name()}")
 
-    return render(request, 'core/superadmin_dashboard.html', {
+    # Fetch data for the dashboard and modals
+    context = {
         'pending_recruiters': User.objects.filter(is_placement_admin=True, is_approved=False),
-        'approved_recruiters': User.objects.filter(is_placement_admin=True, is_approved=True)
-    })
+        'approved_recruiters': User.objects.filter(is_placement_admin=True, is_approved=True),
+        'active_students': User.objects.filter(is_superuser=False, is_placement_admin=False),
+        'active_jobs': Job.objects.all()
+    }
+
+    return render(request, 'core/superadmin_dashboard.html', context)
 
 @login_required
 def student_dashboard(request):

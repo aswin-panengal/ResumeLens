@@ -64,6 +64,7 @@
     </nav>
 
     <div class="container">
+
         {% if messages %}
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
@@ -72,6 +73,19 @@
         </div>
         {% endfor %}
         {% endif %}
+
+        <div class="d-flex gap-3 mb-4">
+            <button type="button" class="btn btn-primary shadow-sm rounded-pill px-4" data-bs-toggle="modal"
+                data-bs-target="#studentsModal">
+                <i class="bi bi-mortarboard me-2"></i>View All Students
+                <span class="badge bg-light text-primary ms-2">{{ active_students|length }}</span>
+            </button>
+            <button type="button" class="btn btn-info shadow-sm rounded-pill px-4 text-dark" data-bs-toggle="modal"
+                data-bs-target="#jobsModal">
+                <i class="bi bi-briefcase me-2"></i>View Active Jobs
+                <span class="badge bg-dark text-white ms-2">{{active_jobs|length}}</span>
+            </button>
+        </div>
 
         <div class="row g-4">
             <div class="col-lg-6">
@@ -87,8 +101,8 @@
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1 fw-bold">{{ recruiter.first_name }} {{ recruiter.last_name }}</h6>
-                                    <small class="text-muted"><i
-                                            class="bi bi-envelope me-1"></i>{{recruiter.email}}</small>
+                                    <small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ recruiter.email
+                                        }}</small>
                                 </div>
                                 <form method="POST" class="m-0">
                                     {% csrf_token %}
@@ -115,8 +129,8 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-header bg-success text-white py-3">
                         <i class="bi bi-shield-check me-2"></i>Active Recruiters
-                        <span class="badge bg-light text-success rounded-pill float-end"> {{approved_recruiters|length}}
-                        </span>
+                        <span
+                            class="badge bg-light text-success rounded-pill float-end">{{approved_recruiters|length}}</span>
                     </div>
                     <div class="card-body p-0">
                         {% if approved_recruiters %}
@@ -140,6 +154,73 @@
                         </div>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="studentsModal" tabindex="-1" aria-labelledby="studentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="studentsModalLabel"><i class="bi bi-mortarboard me-2"></i>Registered
+                        Students</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    {% if active_students %}
+                    <ul class="list-group list-group-flush">
+                        {% for student in active_students %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <div>
+                                <h6 class="mb-1 fw-bold">{{ student.first_name }} {{ student.last_name }}</h6>
+                                <small class="text-muted"><i class="bi bi-envelope me-1"></i>{{ student.email }}</small>
+                            </div>
+                            <span
+                                class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill">Student</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="p-5 text-center text-muted">
+                        <i class="bi bi-person-x fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No students registered yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="jobsModal" tabindex="-1" aria-labelledby="jobsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-dark">
+                    <h5 class="modal-title" id="jobsModalLabel"><i class="bi bi-briefcase me-2"></i>Active Job Postings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    {% if active_jobs %}
+                    <ul class="list-group list-group-flush">
+                        {% for job in active_jobs %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                            <div>
+                                <h6 class="mb-1 fw-bold">{{ job.title }}</h6>
+                                <small class="text-muted"><i class="bi bi-building me-1"></i>{{job.company}}</small>
+                            </div>
+                            <span
+                                class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">Live</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="p-5 text-center text-muted">
+                        <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No active job postings.</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
