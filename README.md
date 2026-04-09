@@ -29,3 +29,5 @@ ResumeLens is an Applicant Tracking System (ATS) built with Django and the Googl
    ```bash
    git clone: https://github.com/aswin-panengal/ResumeLens.git
    cd ResumeLens 
+## Demo
+* Loom Link: https://www.loom.com/share/edaf4624a1364f6f98a20c7f1ce7cb69
