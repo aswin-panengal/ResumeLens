@@ -246,14 +246,16 @@ def apply_for_job(request, job_id):
             application = form.save(commit=False)
             application.job, application.student = job, student_profile
             
-            # AI Processing
+         # AI Processing
             resume_text = extract_text_from_pdf(request.FILES['resume'])
             job_context = f"{job.title} {job.required_skills} {job.description}"
             score = get_ats_score(resume_text, job_context)
             
             application.ai_similarity_score = score
             application.save()
-            save_to_vector_db(application.id, request.user.first_name, resume_text)
+            
+            # THE FIX: Added job.id so chunks are tied to the specific job posting
+            save_to_vector_db(application.id, job.id, request.user.first_name, resume_text)
             
             messages.success(request, f"Applied! AI Match: {score}%")
             return redirect('my_applications')
