@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from datetime import timedelta
 
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
+from django_ratelimit.decorators import ratelimit
 
 from .models import User, StudentProfile, Job, Application
 from .forms import StudentSignUpForm, AdminSignUpForm, JobPostForm, JobApplicationForm
@@ -72,8 +74,8 @@ def signup_view(request):
             
             if user_type == 'student':
                 
-                # THE TOGGLE SWITCH
-                BYPASS_OTP = True
+                # Set BYPASS_OTP=True in .env to skip email verification (dev only)
+                BYPASS_OTP = os.getenv('BYPASS_OTP', 'False') == 'True'
                 
                 if BYPASS_OTP:
                     # INSTANT BYPASS FLOW
@@ -313,7 +315,12 @@ def my_applications(request):
 
 # --- SPECIAL FEATURES ---
 
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
+
 @login_required
+@ratelimit(key='user', rate='10/h', method='POST', block=True)
 def resume_sandbox(request):
     active_jobs = Job.objects.filter(is_active=True)
     feedback, real_score = None, None
@@ -340,6 +347,7 @@ def resume_sandbox(request):
     return render(request, 'core/resume_sandbox.html', {'feedback': feedback, 'real_score': real_score, 'jobs': active_jobs})
 
 @login_required
+@ratelimit(key='user', rate='20/h', method='POST', block=True)
 def job_chat(request, job_id):
     if not request.user.is_placement_admin and not request.user.is_superuser:
         return redirect('student_dashboard')

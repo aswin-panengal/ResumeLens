@@ -34,6 +34,9 @@ urlpatterns = [
 
     # Super Admin
     path('superadmin/', views.superadmin_dashboard, name='superadmin_dashboard'),
+
+    # Health check for Railway / uptime monitors
+    path('health/', views.health_check, name='health_check'),
 ]
 
 # Media handling for Resumes in development
