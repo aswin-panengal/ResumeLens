@@ -20,11 +20,7 @@ RUN python manage.py collectstatic --no-input
 
 EXPOSE 8000
 
-# 2 workers fits within 512MB RAM (Railway/Render free tier)
-# 120s timeout covers Gemini + Groq API round-trip latency
-CMD gunicorn config.wsgi:application \
-    --bind 0.0.0.0:${PORT:-8000} \
-    --workers 2 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile -
+RUN chmod +x start.sh
+
+# start.sh runs gunicorn via an explicit shell so ${PORT:-8000} always expands
+CMD ["./start.sh"]
