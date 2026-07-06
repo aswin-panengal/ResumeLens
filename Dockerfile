@@ -20,7 +20,5 @@ RUN python manage.py collectstatic --no-input
 
 EXPOSE 8000
 
-RUN chmod +x start.sh
-
-# start.sh runs gunicorn via an explicit shell so ${PORT:-8000} always expands
-CMD ["./start.sh"]
+# gunicorn.conf.py reads PORT from os.environ — no shell expansion needed
+CMD ["gunicorn", "config.wsgi:application", "--config", "gunicorn.conf.py"]
