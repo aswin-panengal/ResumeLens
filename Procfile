@@ -1,2 +1,2 @@
-web: gunicorn config.wsgi:application --config gunicorn.conf.py
+web: python serve.py
 release: python manage.py migrate --no-input

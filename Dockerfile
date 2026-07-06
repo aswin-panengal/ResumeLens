@@ -20,5 +20,4 @@ RUN python manage.py collectstatic --no-input
 
 EXPOSE 8000
 
-# gunicorn.conf.py reads PORT from os.environ — no shell expansion needed
-CMD ["gunicorn", "config.wsgi:application", "--config", "gunicorn.conf.py"]
+CMD ["python", "serve.py"]
