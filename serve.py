@@ -2,7 +2,10 @@ import os
 import subprocess
 import sys
 
-port = os.environ.get("PORT", "8000")
+try:
+    port = int(os.environ.get("PORT", "8000"))
+except (ValueError, TypeError):
+    port = 8000
 
 sys.exit(subprocess.call([
     "gunicorn", "config.wsgi:application",
